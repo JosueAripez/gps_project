@@ -1,0 +1,236 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Geotracker - Panel</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+
+  <!-- Sidebar CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-sidebar-v2@3.2.0/css/leaflet-sidebar.min.css" />
+
+  <!-- Estilos personalizados -->
+  <style>
+    body {
+      margin: 0;
+      background: #003e6a;
+      font-family: "Segoe UI", Arial, sans-serif;
+      color: white;
+      overflow: hidden;
+    }
+
+    #map { 
+      height: calc(100vh - 60px);
+      width: 100%; 
+    }
+
+    /* Botón grande admin */
+    #adminBtn {
+      width: 100%;
+      height: 60px;
+      background: #0078c2;
+      color: white;
+      border: none;
+      font-size: 20px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    #adminBtn:hover {
+      background: #0096f0;
+    }
+
+    /* Sidebar */
+    .leaflet-sidebar {
+      background: #002a48 !important;
+      box-shadow: 0 0 20px rgba(0,0,0,0.4);
+    }
+
+    .leaflet-sidebar-header {
+      background: #003e6a !important;
+      color: white;
+      font-weight: bold;
+      padding: 10px;
+      border-bottom: 2px solid #0078c2;
+    }
+
+    label {
+      font-size: 14px;
+      font-weight: bold;
+      margin-top: 10px;
+      display: block;
+      color: white;
+    }
+
+    select, input[type="date"], button {
+      padding: 8px;
+      margin-top: 5px;
+      width: 100%;
+      border-radius: 6px;
+      border: none;
+      outline: none;
+      background: #004d7d;
+      color: white;
+      font-size: 14px;
+    }
+
+    button {
+      background: #0078c2;
+      margin-top: 12px;
+      font-weight: bold;
+      transition: 0.3s;
+    }
+
+    button:hover {
+      background: #0096f0;
+      transform: scale(1.03);
+    }
+
+    /* Tab icons */
+    .leaflet-sidebar-tabs i {
+      font-size: 20px;
+      color: #ffffffcc;
+    }
+
+    .leaflet-sidebar-tabs a:hover i {
+      color: #00aaff;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- BOTÓN ADMIN -->
+  <button id="adminBtn" onclick="location.href='/admin'">⚙ Ir al Administrador de Django</button>
+
+  <!-- SIDEBAR -->
+  <div id="sidebar" class="leaflet-sidebar collapsed">
+
+      <div class="leaflet-sidebar-tabs">
+          <ul>
+              <li><a href="#panel-1" title="Tiempo Real"><i class="fa fa-satellite-dish"></i></a></li>
+              <li><a href="#panel-2" title="Capas"><i class="fa fa-layer-group"></i></a></li>
+              <li><a href="#panel-3" title="Historial"><i class="fa fa-clock-rotate-left"></i></a></li>
+          </ul>
+          <ul>
+              <li>
+                <a href="/admin" title="Administración">
+                  <i class="fa fa-gear"></i>
+                </a>
+              </li>
+          </ul>
+      </div>
+
+      <div class="leaflet-sidebar-content">
+
+          <!-- PANEL 1 -->
+          <div class="leaflet-sidebar-pane" id="panel-1">
+              <h2 class="leaflet-sidebar-header">GPS Tiempo Real</h2>
+
+              <label>Seleccionar dispositivo</label>
+              <select id="deviceSelect">
+                <option value="">-- Selecciona --</option>
+                {% for d in devices %}
+                <option value="{{ d.identifier }}">{{ d.name }} ({{ d.identifier }})</option>
+                {% endfor %}
+              </select>
+
+              <button id="startRealtime">Iniciar seguimiento</button>
+          </div>
+
+          <!-- PANEL 2 -->
+          <div class="leaflet-sidebar-pane" id="panel-2">
+              <h2 class="leaflet-sidebar-header">Capas del mapa</h2>
+              <div id="layersControl"></div>
+          </div>
+
+          <!-- PANEL 3 -->
+          <div class="leaflet-sidebar-pane" id="panel-3">
+              <h2 class="leaflet-sidebar-header">Historial de rutas</h2>
+
+              <label>Dispositivo</label>
+              <select id="historyDevice">
+                {% for d in devices %}
+                <option value="{{ d.id }}">{{ d.name }}</option>
+                {% endfor %}
+              </select>
+
+              <label>Fecha Inicio</label>
+              <input type="date" id="dateFrom">
+
+              <label>Fecha Fin</label>
+              <input type="date" id="dateTo">
+
+              <button onclick="loadHistory()">Cargar historial</button>
+          </div>
+
+      </div>
+
+  </div>
+
+  <!-- MAPA -->
+  <div id="map"></div>
+
+  <!-- Scripts -->
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/leaflet-sidebar-v2@3.2.0/js/leaflet-sidebar.min.js"></script>
+  <script src="https://kit.fontawesome.com/a2e0e9b9d3.js" crossorigin="anonymous"></script>
+
+  <script>
+    // MAPA
+    var map = L.map('map', { center: [19.43, -99.13], zoom: 6 });
+
+    // CAPAS
+    var normal = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19 }).addTo(map);
+    var satelite = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}");
+    var relieve = L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", { maxZoom: 17 });
+    var callesm = L.tileLayer("https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png");
+
+    L.control.layers({
+      "Normal": normal,
+      "Satelital": satelite,
+      "Relieve": relieve,
+      "Calles": callesm
+    }).addTo(map);
+
+    // SIDEBAR
+    var sidebar = L.control.sidebar({
+        autopan: true,
+        closeButton: true,
+        position: 'left',
+        container: 'sidebar'
+    }).addTo(map);
+
+    sidebar.open("panel-1");
+
+    // TIEMPO REAL
+    var marker = null;
+    var polyline = L.polyline([], {weight: 4, color: "yellow"}).addTo(map);
+
+    function startRealtime(identifier) {
+      if (!identifier) return alert("Selecciona un dispositivo");
+
+      var protocol = (location.protocol === "https:") ? "wss" : "ws";
+      var socket = new WebSocket(protocol + "://" + location.host + "/ws/device/" + identifier + "/");
+
+      socket.onmessage = function(e) {
+        var d = JSON.parse(e.data);
+        var lat = d.latitude, lng = d.longitude;
+
+        if (!marker) marker = L.marker([lat, lng]).addTo(map);
+        else marker.setLatLng([lat, lng]);
+
+        polyline.addLatLng([lat, lng]);
+        map.panTo([lat, lng]);
+      };
+    }
+
+    document.getElementById("startRealtime").onclick = function() {
+      startRealtime(document.getElementById("deviceSelect").value);
+    };
+  </script>
+
+</body>
+</html>

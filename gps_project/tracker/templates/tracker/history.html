@@ -1,0 +1,49 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Historial</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <style>#map { height: 80vh; }</style>
+</head>
+<body>
+  <h3>Historial de rutas</h3>
+  <select id="deviceSelect">
+    <option value="">-- Selecciona dispositivo --</option>
+    {% for d in devices %}
+    <option value="{{ d.identifier }}">{{ d.name }}</option>
+    {% endfor %}
+  </select>
+  Desde: <input type="datetime-local" id="start">
+  Hasta: <input type="datetime-local" id="end">
+  <button id="btnLoad">Cargar</button>
+
+  <div id="map"></div>
+
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script>
+    var map = L.map('map').setView([19.432608, -99.133209], 6);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {noWrap: true}).addTo(map);
+    var polyline = L.polyline([], {color: 'blue', weight: 4}).addTo(map);
+
+    document.getElementById("btnLoad").onclick = async function(){
+      polyline.setLatLngs([]);
+      var id = document.getElementById("deviceSelect").value;
+      var start = document.getElementById("start").value;
+      var end = document.getElementById("end").value;
+      if (!id || !start || !end) { alert("llena todos los campos"); return; }
+
+      // Ajustar formato para backend (ISO)
+      const startISO = new Date(start).toISOString();
+      const endISO = new Date(end).toISOString();
+
+      const resp = await fetch(`/api/locations/?device=${id}&start=${startISO}&end=${endISO}`);
+      const data = await resp.json();
+      if (!Array.isArray(data)) { alert("Error al obtener datos"); return; }
+      const coords = data.map(x => [x.latitude, x.longitude]);
+      polyline.setLatLngs(coords);
+      if (coords.length>0) map.fitBounds(polyline.getBounds());
+    }
+  </script>
+</body>
+</html>
