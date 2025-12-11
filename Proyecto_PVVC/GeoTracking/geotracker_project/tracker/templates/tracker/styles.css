@@ -1,0 +1,63 @@
+/* styles.css */
+
+body {
+  font-family: 'Segoe UI', Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: #f7f6fb;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+header {
+  background-color: #003e6a; /* azul */
+  color: white;
+  padding: 10px 20px;
+  text-align: center;
+  font-size: 1.5rem;
+  font-weight: bold;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.controls {
+  padding: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+  background-color: #5a82b1; /* azul claro */
+}
+
+.controls button, .controls select, .controls a {
+  background-color: #003e6a;
+  color: white;
+  border: none;
+  padding: 8px 15px;
+  border-radius: 8px;
+  text-decoration: none;
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: 0.2s;
+}
+
+.controls button:hover, .controls select:hover, .controls a:hover {
+  background-color: #00509e;
+}
+
+#map {
+  flex-grow: 1;
+  height: 80vh;
+  width: 100%;
+  z-index: 0;
+}
+
+footer {
+  background-color: #003e6a;
+  color: white;
+  text-align: center;
+  padding: 10px;
+  font-size: 0.9rem;
+  box-shadow: 0 -2px 5px rgba(0,0,0,0.2);
+}
